@@ -88,6 +88,7 @@ jobs:
 
       - name: Get version
         id: version
+        shell: bash
         run: |
           VERSION=$(git describe --tags --always --dirty 2>/dev/null || echo "dev")
           COMMIT=$(git rev-parse --short HEAD)
