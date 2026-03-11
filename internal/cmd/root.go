@@ -29,9 +29,9 @@ var (
 )
 
 var rootCmd = &cobra.Command{
-	Use:   "presign",
-	Short: "Copy files to S3 and generate presigned URLs",
-	Long:  "presign copies files to S3-compatible object storage and generates presigned URLs for sharing.",
+	Use:           "presign",
+	Short:         "Copy files to S3 and generate presigned URLs",
+	Long:          "presign copies files to S3-compatible object storage and generates presigned URLs for sharing.",
 	SilenceUsage:  true,
 	SilenceErrors: true,
 	PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
