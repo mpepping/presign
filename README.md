@@ -61,6 +61,15 @@ presign cp report.pdf -e 7d
 
 # Copy URL to clipboard (macOS)
 presign cp report.pdf | pbcopy
+
+# Upload with custom endpoint and expiry
+presign cp presentation.pptx --endpoint-url https://s3.backblazeb2.com -e 14d
+
+# Upload with path-style addressing (for Minio, Hetzner, etc.)
+presign cp backup.tar.gz --path-style
+
+# Upload with specific AWS profile
+presign cp data.csv -p production
 ```
 
 ### Flags
