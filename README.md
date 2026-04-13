@@ -18,9 +18,13 @@ make build
 
 ```
 presign cp <file> [s3://bucket/key]
+presign sign <s3://bucket/key>
+presign ls <s3://bucket[/prefix]>
 ```
 
-Copies a file to S3 and prints a presigned URL to stdout.
+`cp` copies a file to S3 and prints a presigned URL to stdout.
+`sign` generates a presigned URL for an object already in S3.
+`ls` lists objects in an S3 bucket.
 
 ### Quick Start with Config File
 
@@ -49,6 +53,9 @@ presign cp report.pdf --endpoint-url https://other.s3.com  # Override endpoint
 
 ### Examples
 
+Upload and sign using the `cp` subcommand:
+
+
 ```
 # Upload using default bucket from config
 presign cp report.pdf
@@ -70,6 +77,38 @@ presign cp backup.tar.gz --path-style
 
 # Upload with specific AWS profile
 presign cp data.csv -p production
+```
+
+
+Sign or resign files already in the remote using the `sign` subcommand:
+
+
+```
+# Generate a presigned URL for an existing object
+presign sign s3://my-bucket/docs/report.pdf
+
+# With custom expiry
+presign sign s3://my-bucket/docs/report.pdf -e 7d
+
+# Copy presigned URL to clipboard (macOS)
+presign sign s3://my-bucket/docs/report.pdf | pbcopy
+
+# With specific AWS profile and endpoint
+presign sign s3://my-bucket/archive.tar.gz -p production --endpoint-url https://s3.example.com
+```
+
+List bucket contents using the `ls` subcommand:
+
+
+```
+# List objects under a prefix
+presign ls s3://my-bucket/docs/
+
+# List top-level contents of a bucket
+presign ls s3://my-bucket/
+
+# With specific AWS profile and endpoint
+presign ls s3://my-bucket/docs/ -p production --endpoint-url https://s3.example.com
 ```
 
 ### Flags
