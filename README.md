@@ -17,12 +17,12 @@ make build
 ## Usage
 
 ```
-presign cp <file> [s3://bucket/key]
+presign cp <file>... [s3://bucket/key]
 presign sign <s3://bucket/key>
 presign ls <s3://bucket[/prefix]>
 ```
 
-`cp` copies a file to S3 and prints a presigned URL to stdout.
+`cp` copies one or more files to S3 and prints a presigned URL per file to stdout.
 `sign` generates a presigned URL for an object already in S3.
 `ls` lists objects in an S3 bucket.
 
@@ -44,6 +44,9 @@ Then upload with minimal commands:
 ```bash
 # Upload using all defaults from config
 presign cp report.pdf
+
+# Upload multiple files at once
+presign cp *.pdf
 
 # Override specific values via CLI
 presign cp report.pdf -e 7d                          # Custom expiry
@@ -77,6 +80,12 @@ presign cp backup.tar.gz --path-style
 
 # Upload with specific AWS profile
 presign cp data.csv -p production
+
+# Upload multiple files to default bucket
+presign cp *.csv
+
+# Upload multiple files to a specific prefix
+presign cp report.pdf slides.pptx s3://my-bucket/meeting/
 ```
 
 

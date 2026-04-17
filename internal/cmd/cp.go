@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 	"time"
 
 	"github.com/mpepping/presign/internal/config"
@@ -15,75 +16,46 @@ import (
 var contentType string
 
 var cpCmd = &cobra.Command{
-	Use:   "cp <file> [s3://bucket/key]",
-	Short: "Copy a file to S3 and return a presigned URL",
-	Args:  cobra.RangeArgs(1, 2),
+	Use:   "cp <file>... [s3://bucket/key]",
+	Short: "Copy file(s) to S3 and return presigned URLs",
+	Args:  cobra.MinimumNArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
-		filePath := args[0]
 		cfg := getConfig(cmd)
 		client := getS3Client(cmd)
 		ctx := cmd.Context()
 
-		// Validate local file
-		absPath, err := filepath.Abs(filePath)
-		if err != nil {
-			return fmt.Errorf("resolving path %s: %w", filePath, err)
-		}
-		info, err := os.Stat(absPath)
-		if err != nil {
-			return fmt.Errorf("file %s: %w", filePath, err)
-		}
-		if info.IsDir() {
-			return fmt.Errorf("%s is a directory, use 'presign sync' instead", filePath)
-		}
+		// Determine if the last arg is an S3 destination
+		var files []string
+		var destBucket, destKey string
+		var hasExplicitDest bool
 
-		// Determine bucket and key
-		var bucket, key string
-		if len(args) == 2 {
-			bucket, key, err = s3client.ParseS3URI(args[1])
+		lastArg := args[len(args)-1]
+		if strings.HasPrefix(lastArg, "s3://") {
+			var err error
+			destBucket, destKey, err = s3client.ParseS3URI(lastArg)
 			if err != nil {
 				return err
 			}
+			hasExplicitDest = true
+			files = args[:len(args)-1]
+			if len(files) == 0 {
+				return fmt.Errorf("no files specified")
+			}
 		} else {
-			bucket = cfg.DefaultBucket
-			key = filepath.Base(absPath)
+			files = args
 		}
 
-		if bucket == "" {
-			return fmt.Errorf("no bucket specified: use --bucket flag or set default_bucket in config")
-		}
-		if key == "" {
-			key = filepath.Base(absPath)
-		}
+		// For a single file with an explicit dest, the key is used as-is (existing behavior).
+		// For multiple files with an explicit dest, the key is used as a prefix.
+		multiFile := len(files) > 1
 
-		// Parse expiry
+		// Parse expiry once
 		expiryDuration, err := config.ParseExpiry(cfg.Expiry)
 		if err != nil {
 			return err
 		}
 
-		if isVerbose() {
-			fmt.Fprintf(os.Stderr, "Uploading %s to s3://%s/%s...\n", filePath, bucket, key)
-		}
-
-		// Upload
-		size, err := client.Upload(ctx, bucket, key, absPath, contentType)
-		if err != nil {
-			return err
-		}
-
-		if isVerbose() {
-			fmt.Fprintf(os.Stderr, "Uploaded %d bytes\n", size)
-			fmt.Fprintf(os.Stderr, "Generating presigned URL with %s expiry...\n", cfg.Expiry)
-		}
-
-		// Generate presigned URL
-		url, expiresAt, err := client.GeneratePresignedURL(ctx, bucket, key, expiryDuration)
-		if err != nil {
-			return err
-		}
-
-		// Save state
+		// Load state once
 		statePath, err := state.DefaultPath()
 		if err != nil {
 			return fmt.Errorf("getting state path: %w", err)
@@ -92,22 +64,74 @@ var cpCmd = &cobra.Command{
 		if err != nil {
 			return fmt.Errorf("loading state: %w", err)
 		}
-		store.Add(state.Entry{
-			Bucket:     bucket,
-			Key:        key,
-			LocalPath:  absPath,
-			URL:        url,
-			ExpiresAt:  expiresAt,
-			UploadedAt: time.Now(),
-			Size:       size,
-		})
+
+		for _, filePath := range files {
+			absPath, err := filepath.Abs(filePath)
+			if err != nil {
+				return fmt.Errorf("resolving path %s: %w", filePath, err)
+			}
+			info, err := os.Stat(absPath)
+			if err != nil {
+				return fmt.Errorf("file %s: %w", filePath, err)
+			}
+			if info.IsDir() {
+				return fmt.Errorf("%s is a directory, use 'presign sync' instead", filePath)
+			}
+
+			// Determine bucket and key for this file
+			var bucket, key string
+			if hasExplicitDest {
+				bucket = destBucket
+				if multiFile || destKey == "" || strings.HasSuffix(destKey, "/") {
+					key = destKey + filepath.Base(absPath)
+				} else {
+					key = destKey
+				}
+			} else {
+				bucket = cfg.DefaultBucket
+				key = filepath.Base(absPath)
+			}
+
+			if bucket == "" {
+				return fmt.Errorf("no bucket specified: use --bucket flag or set default_bucket in config")
+			}
+
+			if isVerbose() {
+				fmt.Fprintf(os.Stderr, "Uploading %s to s3://%s/%s...\n", filePath, bucket, key)
+			}
+
+			size, err := client.Upload(ctx, bucket, key, absPath, contentType)
+			if err != nil {
+				return err
+			}
+
+			if isVerbose() {
+				fmt.Fprintf(os.Stderr, "Uploaded %d bytes\n", size)
+				fmt.Fprintf(os.Stderr, "Generating presigned URL with %s expiry...\n", cfg.Expiry)
+			}
+
+			url, expiresAt, err := client.GeneratePresignedURL(ctx, bucket, key, expiryDuration)
+			if err != nil {
+				return err
+			}
+
+			store.Add(state.Entry{
+				Bucket:     bucket,
+				Key:        key,
+				LocalPath:  absPath,
+				URL:        url,
+				ExpiresAt:  expiresAt,
+				UploadedAt: time.Now(),
+				Size:       size,
+			})
+
+			fmt.Println(url)
+		}
+
 		if err := state.Save(statePath, store); err != nil {
-			// Non-fatal: warn but still output the URL
 			fmt.Fprintf(os.Stderr, "Warning: failed to save state: %v\n", err)
 		}
 
-		// Output URL to stdout (pipe-friendly)
-		fmt.Println(url)
 		return nil
 	},
 }
