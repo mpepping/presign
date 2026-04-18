@@ -125,6 +125,9 @@ var cpCmd = &cobra.Command{
 				Size:       size,
 			})
 
+			if multiFile {
+				fmt.Printf("%s:\n", filepath.Base(absPath))
+			}
 			fmt.Println(url)
 		}
 
