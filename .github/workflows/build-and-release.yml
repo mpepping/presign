@@ -72,6 +72,14 @@ jobs:
             goos: darwin
             goarch: arm64
             suffix: darwin-arm64
+          - os: windows-latest
+            goos: windows
+            goarch: amd64
+            suffix: windows-amd64.exe
+          - os: windows-latest
+            goos: windows
+            goarch: arm64
+            suffix: windows-arm64.exe
     steps:
       - uses: actions/checkout@v4
         with:
@@ -94,6 +102,7 @@ jobs:
           echo "date=$DATE" >> $GITHUB_OUTPUT
 
       - name: Build
+        shell: bash
         env:
           GOOS: ${{ matrix.goos }}
           GOARCH: ${{ matrix.goarch }}
