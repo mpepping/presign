@@ -100,12 +100,22 @@ var cpCmd = &cobra.Command{
 				fmt.Fprintf(os.Stderr, "Uploading %s to s3://%s/%s...\n", filePath, bucket, key)
 			}
 
-			size, err := client.Upload(ctx, bucket, key, absPath, contentType)
+			var progressFn s3client.ProgressFunc
+			if isVerbose() {
+				name := filepath.Base(absPath)
+				progressFn = func(bytesRead, totalSize int64) {
+					pct := float64(bytesRead) / float64(totalSize) * 100
+					fmt.Fprintf(os.Stderr, "\r  %s: %.1f%% (%d / %d bytes)", name, pct, bytesRead, totalSize)
+				}
+			}
+
+			size, err := client.Upload(ctx, bucket, key, absPath, contentType, progressFn)
 			if err != nil {
 				return err
 			}
 
 			if isVerbose() {
+				fmt.Fprintln(os.Stderr)
 				fmt.Fprintf(os.Stderr, "Uploaded %d bytes\n", size)
 				fmt.Fprintf(os.Stderr, "Generating presigned URL with %s expiry...\n", cfg.Expiry)
 			}
