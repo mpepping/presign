@@ -4,6 +4,14 @@ Copy files to S3-compatible object storage and generate presigned URLs for shari
 
 ## Install
 
+With Homebrew (macOS and Linux):
+
+```
+brew install mpepping/tap/presign
+```
+
+With Go:
+
 ```
 go install github.com/mpepping/presign/cmd/presign@latest
 ```
