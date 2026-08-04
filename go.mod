@@ -4,7 +4,7 @@ go 1.26.1
 
 require (
 	github.com/BurntSushi/toml v1.6.0
-	github.com/aws/aws-sdk-go-v2 v1.43.2
+	github.com/aws/aws-sdk-go-v2 v1.43.3
 	github.com/aws/aws-sdk-go-v2/config v1.32.33
 	github.com/aws/aws-sdk-go-v2/feature/s3/manager v1.22.37
 	github.com/aws/aws-sdk-go-v2/service/s3 v1.106.2
@@ -26,7 +26,7 @@ require (
 	github.com/aws/aws-sdk-go-v2/service/sso v1.33.2 // indirect
 	github.com/aws/aws-sdk-go-v2/service/ssooidc v1.38.2 // indirect
 	github.com/aws/aws-sdk-go-v2/service/sts v1.45.2 // indirect
-	github.com/aws/smithy-go v1.27.5 // indirect
+	github.com/aws/smithy-go v1.27.6 // indirect
 	github.com/inconshreveable/mousetrap v1.1.0 // indirect
 	github.com/spf13/pflag v1.0.9 // indirect
 )
